@@ -1,0 +1,37 @@
+services:
+  openldap:
+    image: osixia/openldap:latest
+    container_name: openldap
+    restart: unless-stopped
+    ports:
+      - ${LDAP_PORT}:389
+      - 636:636
+    environment:
+      - LDAP_BASE_DN=${LDAP_BASE_DN}
+      - LDAP_ORGANISATION=${LDAP_ORGANISATION}
+      - LDAP_DOMAIN=${LDAP_DOMAIN}
+      - LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD}
+      - LDAP_TLS=${LDAP_TLS}
+    volumes:
+      - ./data:/var/lib/ldap
+      - ./config:/etc/ldap/slapd.d
+    command: --copy-service
+    networks:
+      - sync-ldap-network
+
+  wecom-ldap-sync:
+    image: caoool/wecom-ldap-sync:latest
+    container_name: wecom-ldap-sync
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - LDAP_HOST=openldap
+    depends_on:
+      - openldap
+    networks:
+      - sync-ldap-network
+
+networks:
+  sync-ldap-network:
+    driver: bridge

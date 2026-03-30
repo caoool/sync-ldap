@@ -1,0 +1,4 @@
+ldap3>=2.9,<3
+requests>=2.28,<3
+apscheduler>=3.10,<4
+pydantic-settings>=2.0,<3
