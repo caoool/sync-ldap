@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     ldap_base_dn: str = "dc=xzs,dc=dev"
     ldap_user_ou: str = "people"  # top-level OU for users
 
+    # Default password for new LDAP users (set on creation only)
+    ldap_default_password: str = "changeme"  # users should change after first login
+
     # Email
     email_suffix: str = ""  # e.g. "@example.com" → uid+suffix as mail; blank to skip
 

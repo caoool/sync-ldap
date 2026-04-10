@@ -20,6 +20,7 @@ services:
       - sync-ldap-network
 
   wecom-ldap-sync:
+    build: ./wecom-ldap-sync
     image: caoool/wecom-ldap-sync:latest
     container_name: wecom-ldap-sync
     restart: unless-stopped

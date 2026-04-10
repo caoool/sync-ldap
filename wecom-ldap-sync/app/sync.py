@@ -43,6 +43,11 @@ def run_sync():
     try:
         ldap.connect()
 
+        # 0. Set default password for existing users that have none
+        pwd_count = ldap.set_default_password_for_all_users()
+        if pwd_count:
+            logger.info("Set default password for %d existing user(s)", pwd_count)
+
         # 1. Fetch WeCom data
         departments = wecom.get_departments()
         dept_map = build_department_tree(departments)

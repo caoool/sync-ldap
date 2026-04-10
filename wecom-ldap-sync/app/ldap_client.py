@@ -1,5 +1,7 @@
 """LDAP operations for syncing WeCom data."""
+import hashlib
 import logging
+import os
 
 from ldap3 import (
     ALL,
@@ -116,8 +118,18 @@ class LDAPClient:
 
         return attrs
 
+    @staticmethod
+    def _ssha_hash(password: str) -> bytes:
+        """Generate an SSHA hash for the given password."""
+        salt = os.urandom(16)
+        digest = hashlib.sha1(password.encode("utf-8") + salt).digest()
+        import base64
+        return b"{SSHA}" + base64.b64encode(digest + salt)
+
     def _create_user(self, dn: str, attrs: dict) -> bool:
         object_classes = ["inetOrgPerson", "organizationalPerson", "person", "top"]
+        if settings.ldap_default_password:
+            attrs["userPassword"] = self._ssha_hash(settings.ldap_default_password)
         self.conn.add(dn, object_classes, attrs)
         if self.conn.result["result"] == 0:
             logger.info("Created user: %s", dn)
@@ -216,6 +228,34 @@ class LDAPClient:
             return True
         logger.warning("Failed to delete %s: %s", dn, self.conn.result)
         return False
+
+    def set_default_password_for_all_users(self) -> int:
+        """Set the default password on all existing users that lack one.
+
+        Returns the number of users updated.
+        """
+        if not settings.ldap_default_password:
+            logger.warning("No default password configured, skipping")
+            return 0
+
+        search_base = f"ou={settings.ldap_user_ou},{settings.ldap_base_dn}"
+        self.conn.search(
+            search_base,
+            "(&(objectClass=inetOrgPerson)(!(userPassword=*)))",
+            search_scope=SUBTREE,
+            attributes=["uid"],
+        )
+        count = 0
+        hashed = self._ssha_hash(settings.ldap_default_password)
+        for entry in self.conn.entries:
+            dn = str(entry.entry_dn)
+            self.conn.modify(dn, {"userPassword": [(MODIFY_REPLACE, [hashed])]})
+            if self.conn.result["result"] == 0:
+                logger.info("Set default password for: %s", dn)
+                count += 1
+            else:
+                logger.warning("Failed to set password for %s: %s", dn, self.conn.result)
+        return count
 
     # ── Helpers ──────────────────────────────────────────────────────────
 

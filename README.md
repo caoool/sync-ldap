@@ -7,6 +7,7 @@ Sync your WeCom (企业微信) contacts into OpenLDAP automatically. Runs as a D
 - Pulls departments and users from WeCom via a self-built app (自建应用) with contacts read permission
 - Creates a matching OU hierarchy in LDAP
 - Syncs user attributes: name, position, alias, department, email
+- Sets a configurable default password (SSHA-hashed) for new users and existing users that lack one
 - Runs on a configurable schedule (default: every 30 minutes)
 - Optionally removes LDAP users no longer in WeCom
 
@@ -33,6 +34,14 @@ docker compose up -d
 |---------|------|-------------|
 | OpenLDAP | 389 | LDAP server |
 | wecom-ldap-sync | — | Sync service (no exposed port) |
+
+## Configuration Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LDAP_DEFAULT_PASSWORD` | `changeme` | Password assigned to new users (SSHA-hashed). Also applied to existing users without a password on the next sync. Not overwritten if the user already has one. |
+
+See `.env.example` for the full list of variables.
 
 ## Limitations
 
