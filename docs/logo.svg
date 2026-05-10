@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="wecom-ldap-sync">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#07c160"/>
+      <stop offset="0.55" stop-color="#28d4a0"/>
+      <stop offset="1" stop-color="#5b6cff"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="64" height="64" rx="14" fill="url(#brand)"/>
+  <!-- Inner glyph: arrow flowing into a directory tree -->
+  <g stroke="white" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Arrow shaft -->
+    <line x1="13" y1="32" x2="29" y2="32"/>
+    <!-- Arrowhead -->
+    <polyline points="23.5,26.5 29,32 23.5,37.5"/>
+    <!-- Three directory lines (decreasing length) -->
+    <line x1="35" y1="22" x2="51" y2="22"/>
+    <line x1="35" y1="32" x2="48" y2="32"/>
+    <line x1="35" y1="42" x2="44" y2="42"/>
+  </g>
+</svg>
