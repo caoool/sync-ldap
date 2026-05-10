@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+
+# Major search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: Sogou web spider
+Allow: /
+
+User-agent: 360Spider
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: YisouSpider
+Allow: /
+
+Sitemap: https://caoool.github.io/sync-ldap/sitemap.xml

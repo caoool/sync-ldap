@@ -3,13 +3,107 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>wecom-ldap-sync · WeCom directory → LDAP, on a cron</title>
-<meta name="description" content="A tiny Docker service that mirrors your WeCom (企业微信) directory into LDAP. Departments, users, groups, passwords — synced automatically." />
-<meta property="og:title" content="wecom-ldap-sync — WeCom directory → LDAP, on a cron" />
-<meta property="og:description" content="A tiny Docker service that mirrors your WeCom (企业微信) directory into LDAP. Set it up in five minutes, forget about it for years." />
+<meta name="format-detection" content="telephone=no" />
+<meta name="referrer" content="origin" />
+
+<!-- Primary -->
+<title>wecom-ldap-sync · 企业微信通讯录同步到 LDAP / OpenLDAP · WeCom Directory Sync</title>
+<meta name="title" content="wecom-ldap-sync · 企业微信通讯录同步到 LDAP / OpenLDAP" />
+<meta name="description" content="开源的企业微信(WeCom)通讯录同步到 LDAP / OpenLDAP 工具。一个轻量的 Docker 服务，自动同步部门、人员、组织架构、用户分组与密码 — 五分钟接入，适用于企业 SSO 单点登录、域账号统一管理、员工目录服务。" />
+<meta name="keywords" content="企业微信,WeCom,LDAP,OpenLDAP,企业微信LDAP,企业微信通讯录同步,企业微信同步LDAP,企业微信OpenLDAP,通讯录同步,组织架构同步,部门同步,用户同步,人员同步,LDAP同步,LDAP用户管理,目录服务,自建应用,企业微信自建应用,SSO,单点登录,统一身份认证,身份管理,域账号同步,企业身份管理,Active Directory,AD同步,Docker,Docker Compose,开源,Apache-2.0,自托管,wecom-ldap-sync,sync-ldap,钉钉LDAP,飞书LDAP" />
+<meta name="author" content="caoool" />
+<meta name="generator" content="static" />
+<link rel="canonical" href="https://caoool.github.io/sync-ldap/" />
+
+<!-- Hreflang -->
+<link rel="alternate" hreflang="x-default" href="https://caoool.github.io/sync-ldap/" />
+<link rel="alternate" hreflang="en" href="https://caoool.github.io/sync-ldap/?lang=en" />
+<link rel="alternate" hreflang="zh-CN" href="https://caoool.github.io/sync-ldap/?lang=zh" />
+<link rel="alternate" hreflang="zh-Hans" href="https://caoool.github.io/sync-ldap/?lang=zh" />
+
+<!-- Open Graph (used by WeChat / 微信, QQ, WeWork link previews) -->
 <meta property="og:type" content="website" />
-<meta property="og:image" content="https://caoool.github.io/sync-ldap/logo.svg" />
+<meta property="og:url" content="https://caoool.github.io/sync-ldap/" />
+<meta property="og:site_name" content="wecom-ldap-sync" />
+<meta property="og:locale" content="zh_CN" />
+<meta property="og:locale:alternate" content="en_US" />
+<meta property="og:title" content="wecom-ldap-sync · 企业微信通讯录同步到 LDAP / OpenLDAP" />
+<meta property="og:description" content="开源的企业微信通讯录同步到 LDAP / OpenLDAP 工具。一个轻量的 Docker 服务，自动同步部门、人员、组织架构、分组与密码 — 五分钟接入，适用于企业 SSO 单点登录、统一身份认证。" />
+<meta property="og:image" content="https://caoool.github.io/sync-ldap/og-image.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="wecom-ldap-sync — 把企业微信通讯录自动同步进 LDAP" />
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="wecom-ldap-sync · WeCom (企业微信) directory → LDAP" />
+<meta name="twitter:description" content="A tiny Docker service that mirrors your 企业微信 directory into OpenLDAP — departments, users, groups, passwords. Five-minute setup, then forget." />
+<meta name="twitter:image" content="https://caoool.github.io/sync-ldap/og-image.svg" />
+
+<!-- Robots -->
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="googlebot" content="index, follow" />
+<meta name="baiduspider" content="index, follow" />
+<meta name="bingbot" content="index, follow" />
+<meta name="sogou spider" content="index, follow" />
+<meta name="360spider" content="index, follow" />
+
+<!-- Add your search engine verifications here when registered:
+<meta name="baidu-site-verification" content="..." />
+<meta name="google-site-verification" content="..." />
+<meta name="sogou_site_verification" content="..." />
+<meta name="360-site-verification" content="..." />
+-->
+
 <link rel="icon" type="image/svg+xml" href="logo.svg" />
+<link rel="apple-touch-icon" href="logo.svg" />
+<link rel="sitemap" type="application/xml" href="sitemap.xml" />
+
+<!-- Structured data: SoftwareSourceCode -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "wecom-ldap-sync",
+  "alternateName": ["企业微信 LDAP 同步", "WeCom LDAP Sync", "sync-ldap"],
+  "description": "开源的企业微信(WeCom)通讯录同步到 LDAP / OpenLDAP 工具。轻量 Docker 服务，自动同步部门、人员、组织架构、分组与密码。Open-source Docker service that mirrors WeCom directory into LDAP.",
+  "url": "https://caoool.github.io/sync-ldap/",
+  "codeRepository": "https://github.com/caoool/sync-ldap",
+  "programmingLanguage": ["Python", "Docker"],
+  "runtimePlatform": "Docker",
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "image": "https://caoool.github.io/sync-ldap/og-image.svg",
+  "inLanguage": ["zh-CN", "en"],
+  "keywords": "企业微信, WeCom, LDAP, OpenLDAP, 通讯录同步, 组织架构, SSO, 单点登录, 自建应用, Docker, 身份管理, 目录服务",
+  "author": {
+    "@type": "Person",
+    "name": "caoool",
+    "url": "https://github.com/caoool"
+  },
+  "isAccessibleForFree": true
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "wecom-ldap-sync",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Linux, macOS, Windows (Docker)",
+  "softwareRequirements": "Docker, Docker Compose",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "url": "https://caoool.github.io/sync-ldap/",
+  "downloadUrl": "https://hub.docker.com/r/caoool/wecom-ldap-sync"
+}
+</script>
+
+<!-- Performance hints -->
+<link rel="dns-prefetch" href="https://api.github.com" />
+<link rel="dns-prefetch" href="https://github.com" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -53,7 +147,7 @@
     -moz-osx-font-smoothing:grayscale;
     overflow-x:hidden;
   }
-  html[lang="zh"] body{font-family:'Noto Sans SC','Inter',system-ui,sans-serif}
+  html[lang^="zh"] body{font-family:'Noto Sans SC','Inter',system-ui,sans-serif}
 
   /* Background grid + gradient */
   body::before{
@@ -83,7 +177,15 @@
 
   /* Bilingual blocks */
   html[lang="en"] [data-only-lang="zh"]{display:none !important}
-  html[lang="zh"] [data-only-lang="en"]{display:none !important}
+  html[lang^="zh"] [data-only-lang="en"]{display:none !important}
+
+  /* SR-only — visible to crawlers and screen readers, not to sighted users */
+  .sr-only{
+    position:absolute !important;
+    width:1px;height:1px;
+    padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;
+  }
 
   /* Layout */
   .wrap{max-width:1180px;margin:0 auto;padding:0 28px;position:relative;z-index:1}
@@ -184,7 +286,7 @@
     max-width:680px;margin:0 auto 44px;
     line-height:1.6;
   }
-  html[lang="zh"] .hero-sub{max-width:620px}
+  html[lang^="zh"] .hero-sub{max-width:620px}
 
   .hero-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:64px}
   .btn{
@@ -634,10 +736,14 @@
     </h1>
 
     <p class="hero-sub"
-       data-en="A tiny Docker service that pulls departments, users, and groups from WeCom — and writes them faithfully into any LDAP server. Set it up in five minutes, then forget about it."
-       data-zh="一个轻量的 Docker 服务：从企业微信拉取部门、人员、分组，原样写入任意 LDAP 服务器。五分钟接入，之后无需再管。">
-       A tiny Docker service that pulls departments, users, and groups from WeCom — and writes them faithfully into any LDAP server. Set it up in five minutes, then forget about it.
+       data-en="A tiny open-source Docker service that pulls departments, users, and groups from WeCom (企业微信) and writes them faithfully into any LDAP / OpenLDAP server — perfect for SSO, unified identity, and centralized account management. Five-minute setup."
+       data-zh="开源的企业微信(WeCom)通讯录同步工具：用一个轻量 Docker 服务，自动把企业的部门、人员、组织架构、用户分组同步到 LDAP / OpenLDAP，支撑企业级 SSO 单点登录、统一身份认证与域账号管理。五分钟接入，之后无需再管。">
+       A tiny open-source Docker service that pulls departments, users, and groups from WeCom (企业微信) and writes them faithfully into any LDAP / OpenLDAP server — perfect for SSO, unified identity, and centralized account management. Five-minute setup.
     </p>
+
+    <!-- SEO: semantic keyword block, hidden from sighted users -->
+    <h2 class="sr-only" data-only-lang="zh">企业微信通讯录同步到 LDAP / OpenLDAP 的开源工具，支持 SSO 单点登录、统一身份认证、组织架构同步、自建应用、Docker 自托管部署。</h2>
+    <h2 class="sr-only" data-only-lang="en">Open-source tool to sync the WeCom (Enterprise WeChat) directory into LDAP / OpenLDAP, supporting SSO, unified identity, organization tree mirroring, self-built app credentials, and self-hosted Docker deployment.</h2>
 
     <div class="hero-cta">
       <a href="#quickstart" class="btn btn-primary">
@@ -1223,25 +1329,54 @@ ldapsearch -x -H ldap://localhost:389 \
 
 <script>
   // ─── Bilingual ──────────────────────────────────────────
+  // 'zh' is the internal key for data attributes; 'zh-CN' is what we set on
+  // <html lang> so search engines (Google, Baidu) get the proper locale.
   const html = document.documentElement;
   const langButtons = document.querySelectorAll('[data-set-lang]');
+  const HTML_LANG = { en: 'en', zh: 'zh-CN' };
 
   function applyLang(lang){
-    html.setAttribute('lang', lang);
+    html.setAttribute('lang', HTML_LANG[lang] || 'en');
     document.body.setAttribute('data-lang', lang);
     document.querySelectorAll('[data-en], [data-zh]').forEach(el => {
       const text = el.dataset[lang];
       if (text != null && text !== '') el.textContent = text;
     });
     langButtons.forEach(b => b.classList.toggle('active', b.dataset.setLang === lang));
-    try { localStorage.setItem('sync-ldap-lang', lang); } catch(e){}
+    // Update OG locale dynamically for in-page sharing widgets
+    const ogLocale = document.querySelector('meta[property="og:locale"]');
+    if (ogLocale) ogLocale.setAttribute('content', lang === 'zh' ? 'zh_CN' : 'en_US');
   }
-  langButtons.forEach(b => b.addEventListener('click', () => applyLang(b.dataset.setLang)));
 
-  // Restore preference, otherwise infer from browser
-  const stored = (function(){ try { return localStorage.getItem('sync-ldap-lang'); } catch(e){ return null; } })();
-  const browserPrefersZh = (navigator.language || '').toLowerCase().startsWith('zh');
-  applyLang(stored || (browserPrefersZh ? 'zh' : 'en'));
+  function setLang(lang, {persist = true} = {}){
+    applyLang(lang);
+    if (persist) {
+      try { localStorage.setItem('sync-ldap-lang', lang); } catch(e){}
+      // Reflect in URL — makes hreflang / shared links work
+      try {
+        const url = new URL(location.href);
+        url.searchParams.set('lang', lang);
+        history.replaceState(null, '', url.toString());
+      } catch(e){}
+    }
+  }
+
+  langButtons.forEach(b => b.addEventListener('click', () => setLang(b.dataset.setLang)));
+
+  // Resolution order: URL ?lang= wins (so hreflang / shared links land correctly),
+  // then localStorage preference, then browser language.
+  function detectLang(){
+    try {
+      const fromUrl = new URL(location.href).searchParams.get('lang');
+      if (fromUrl === 'en' || fromUrl === 'zh') return fromUrl;
+    } catch(e){}
+    try {
+      const stored = localStorage.getItem('sync-ldap-lang');
+      if (stored === 'en' || stored === 'zh') return stored;
+    } catch(e){}
+    return (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  }
+  applyLang(detectLang());
 
   // ─── Header shadow on scroll ────────────────────────────
   const hdr = document.getElementById('hdr');

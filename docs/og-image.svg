@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0a0e1a"/>
+      <stop offset="1" stop-color="#0d1322"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07c160"/>
+      <stop offset="0.55" stop-color="#28d4a0"/>
+      <stop offset="1" stop-color="#5b6cff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.7" cy="0" r="0.7">
+      <stop offset="0" stop-color="#5b6cff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#5b6cff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0.1" cy="0.4" r="0.5">
+      <stop offset="0" stop-color="#07c160" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#07c160" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.04"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <rect width="1200" height="630" fill="url(#glow2)"/>
+
+  <!-- Logo mark, large -->
+  <g transform="translate(80, 110)">
+    <rect width="120" height="120" rx="28" fill="url(#brand)"/>
+    <g stroke="white" stroke-width="6.8" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(0,0) scale(1.875)">
+      <line x1="13" y1="32" x2="29" y2="32"/>
+      <polyline points="23.5,26.5 29,32 23.5,37.5"/>
+      <line x1="35" y1="22" x2="51" y2="22"/>
+      <line x1="35" y1="32" x2="48" y2="32"/>
+      <line x1="35" y1="42" x2="44" y2="42"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="80" y="320" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace" font-size="68" font-weight="700" fill="#e7e9ee" letter-spacing="-1.5">wecom-ldap-sync</text>
+
+  <!-- Tagline (Chinese, prominent) -->
+  <text x="80" y="394" font-family="'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="42" font-weight="700" fill="#e7e9ee" letter-spacing="-0.5">把<tspan fill="url(#brand)">企业微信</tspan>通讯录，自动同步进 <tspan fill="url(#brand)">LDAP</tspan></text>
+
+  <!-- Tagline (English, secondary) -->
+  <text x="80" y="448" font-family="'Inter', system-ui, sans-serif" font-size="26" fill="#aab0bc" font-weight="500">Mirror your WeCom directory into LDAP — on a five-minute setup.</text>
+
+  <!-- Feature pills -->
+  <g font-family="'Inter', 'PingFang SC', system-ui, sans-serif" font-size="20" font-weight="600">
+    <g transform="translate(80, 510)">
+      <rect width="170" height="48" rx="24" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/>
+      <text x="85" y="31" fill="#e7e9ee" text-anchor="middle">🐳  Docker</text>
+    </g>
+    <g transform="translate(266, 510)">
+      <rect width="200" height="48" rx="24" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/>
+      <text x="100" y="31" fill="#e7e9ee" text-anchor="middle">⚙  自建应用</text>
+    </g>
+    <g transform="translate(482, 510)">
+      <rect width="200" height="48" rx="24" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/>
+      <text x="100" y="31" fill="#e7e9ee" text-anchor="middle">🔄  定时同步</text>
+    </g>
+    <g transform="translate(698, 510)">
+      <rect width="220" height="48" rx="24" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/>
+      <text x="110" y="31" fill="#e7e9ee" text-anchor="middle">🆓  Apache-2.0</text>
+    </g>
+  </g>
+
+  <!-- Repo URL bottom-right -->
+  <text x="1120" y="588" font-family="'JetBrains Mono', monospace" font-size="20" fill="#6c7280" text-anchor="end">github.com/caoool/sync-ldap</text>
+
+  <!-- Decorative accent in top-right -->
+  <g transform="translate(950, 130)" opacity="0.55">
+    <circle cx="100" cy="100" r="170" fill="none" stroke="url(#brand)" stroke-width="2" stroke-dasharray="4 12" opacity="0.4"/>
+    <circle cx="100" cy="100" r="120" fill="none" stroke="url(#brand)" stroke-width="2" stroke-dasharray="2 8" opacity="0.5"/>
+  </g>
+</svg>
