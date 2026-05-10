@@ -1,0 +1,29 @@
+# wecom-ldap-sync
+
+> Open-source Docker service that mirrors your WeCom (企业微信) directory into OpenLDAP — departments, users, groups, and passwords. Designed for SSO, unified identity, and centralized account management on a self-hosted LAN.
+
+A tiny, single-purpose tool: one sync container reads the WeCom directory via a self-built app (自建应用), writes a faithful copy into any LDAP server, and re-runs on a configurable interval (default: every 30 minutes). Apache-2.0, no telemetry, runs entirely behind your firewall.
+
+## Project
+
+- [Landing page](https://caoool.github.io/sync-ldap/): Bilingual (English / 中文) overview, features, quick start, config reference, and FAQ.
+- [GitHub repository](https://github.com/caoool/sync-ldap): Source, issues, and PRs.
+- [Docker Hub](https://hub.docker.com/r/caoool/wecom-ldap-sync): Pre-built image `caoool/wecom-ldap-sync:latest`.
+- [README](https://github.com/caoool/sync-ldap/blob/main/README.md): Bilingual setup instructions and config table.
+- [.env.example](https://github.com/caoool/sync-ldap/blob/main/.env.example): Complete list of environment variables with defaults.
+- [compose.yml](https://github.com/caoool/sync-ldap/blob/main/compose.yml): Reference Docker Compose stack (openldap + wecom-ldap-sync).
+
+## Key concepts
+
+- **WeCom self-built app (企业微信自建应用)**: Required source of credentials. Needs the contacts read permission (通讯录) and the server's public IP added to the app's trusted IP list (企业可信IP).
+- **OU mirroring**: WeCom's department tree is reproduced 1:1 as an OU hierarchy in LDAP. Users live under `LDAP_USER_OU` (default `people`).
+- **Default password**: `LDAP_DEFAULT_PASSWORD` is SSHA-hashed and applied to new users and to existing users that lack a password. Already-set passwords are never overwritten.
+- **Email fallback**: WeCom only returns real emails for verified orgs (已验证企业). For unverified orgs, set `EMAIL_SUFFIX=@yourdomain.com` to auto-generate `uid@yourdomain.com`. Real emails always win when present.
+- **Orphan cleanup**: `SYNC_DELETE_ORPHANS=true` removes LDAP users no longer in WeCom on the next sync.
+- **Dry run**: `DRY_RUN=true` logs every operation without writing to LDAP.
+
+## Roadmap
+
+- DingTalk (钉钉) sync — planned.
+- Feishu (飞书) sync — planned.
+- Multi-source merge (multiple platforms into one LDAP tree) — planned.

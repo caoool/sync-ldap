@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="format-detection" content="telephone=no" />
 <meta name="referrer" content="origin" />
+<meta name="theme-color" content="#07c160" />
+<meta name="color-scheme" content="dark light" />
 
 <!-- Primary -->
 <title>wecom-ldap-sync · 企业微信通讯录同步到 LDAP / OpenLDAP · WeCom Directory Sync</title>
@@ -98,6 +100,82 @@
   },
   "url": "https://caoool.github.io/sync-ldap/",
   "downloadUrl": "https://hub.docker.com/r/caoool/wecom-ldap-sync"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home",       "item": "https://caoool.github.io/sync-ldap/" },
+    { "@type": "ListItem", "position": 2, "name": "Quick Start","item": "https://caoool.github.io/sync-ldap/#quickstart" },
+    { "@type": "ListItem", "position": 3, "name": "Config",     "item": "https://caoool.github.io/sync-ldap/#config" },
+    { "@type": "ListItem", "position": 4, "name": "FAQ",        "item": "https://caoool.github.io/sync-ldap/#faq" }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How often does the sync run, and can I change the interval?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Every 30 minutes by default. Set SYNC_INTERVAL_MINUTES in your .env file to change it. The sync also runs once immediately when the container starts."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why isn't WeCom returning email or phone numbers for my users?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "WeCom restricts email and mobile to verified organizations (已验证企业). For unverified orgs the API returns empty strings. As a workaround, set EMAIL_SUFFIX=@yourdomain.com and the sync will auto-generate uid@yourdomain.com as the mail attribute. Real WeCom emails always take priority when present."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What happens when an employee leaves the company?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "With SYNC_DELETE_ORPHANS=true (the default), users no longer in WeCom are removed from LDAP on the next sync. Set it to false to keep stale entries — useful if you want to preserve historical accounts."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How are passwords set on synced LDAP users?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "New users receive LDAP_DEFAULT_PASSWORD (SSHA-hashed). Existing users without a password also receive it on the next sync. Users who already have a password are never overwritten, so they can change their own credentials safely."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I preview changes before they hit LDAP?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Set DRY_RUN=true in .env and the sync logs every operation it would perform without writing anything. Set it back to false once the diff looks right."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does this support DingTalk (钉钉) or Feishu (飞书)?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not yet — both are on the roadmap. The architecture is platform-agnostic, so adding a new source is a matter of writing a new fetcher. Issues and PRs are welcome."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need to expose LDAP publicly on the internet?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The sync container talks to OpenLDAP over the internal Docker network. Only expose ports 389/636 to the LAN clients that need them. LDAPS is supported via LDAP_TLS=true."
+      }
+    }
+  ]
 }
 </script>
 
@@ -635,6 +713,51 @@
   .roadmap-item p{margin:0;color:var(--text-dim);font-size:14px;line-height:1.5}
   @media(max-width:880px){.roadmap{grid-template-columns:1fr}}
 
+  /* FAQ */
+  .faq-list{display:flex;flex-direction:column;gap:10px;max-width:880px;margin:0 auto}
+  .faq-item{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:0 22px;
+    transition:background .2s ease, border-color .2s ease;
+  }
+  .faq-item:hover{background:var(--card-hover);border-color:var(--border-strong)}
+  .faq-item[open]{background:var(--card-hover);border-color:var(--border-strong)}
+  .faq-item > summary{
+    list-style:none;
+    cursor:pointer;
+    padding:18px 0;
+    font-weight:600;
+    font-size:15.5px;
+    color:var(--text);
+    display:flex;align-items:center;gap:14px;
+    user-select:none;
+  }
+  .faq-item > summary::-webkit-details-marker{display:none}
+  .faq-item > summary::after{
+    content:"";
+    margin-left:auto;
+    width:10px;height:10px;
+    border-right:1.5px solid var(--text-dim);
+    border-bottom:1.5px solid var(--text-dim);
+    transform:rotate(45deg);
+    transition:transform .2s ease;
+    flex-shrink:0;
+  }
+  .faq-item[open] > summary::after{transform:rotate(-135deg)}
+  .faq-item .faq-a{
+    padding:0 0 20px;
+    color:var(--text-dim);
+    font-size:14.5px;line-height:1.65;
+    margin:0;
+  }
+  .faq-item .faq-a code{
+    font-family:var(--mono);font-size:12.5px;
+    color:#a4b3ff;background:rgba(91,108,255,0.08);
+    padding:1px 6px;border-radius:4px;
+  }
+
   /* CTA */
   .cta-card{
     margin-top:30px;
@@ -698,6 +821,7 @@
       <a href="#schema" data-en="What's synced" data-zh="同步内容">What's synced</a>
       <a href="#quickstart" data-en="Quick Start" data-zh="快速开始">Quick Start</a>
       <a href="#config" data-en="Config" data-zh="配置">Config</a>
+      <a href="#faq" data-en="FAQ" data-zh="常见问题">FAQ</a>
       <a href="#roadmap" data-en="Roadmap" data-zh="路线图">Roadmap</a>
     </nav>
     <div class="nav-actions">
@@ -1241,6 +1365,95 @@ ldapsearch -x -H ldap://localhost:389 \
             <tr><td><code>EMAIL_SUFFIX</code></td><td class="default">@example.com</td><td class="desc" data-en="Generate uid + suffix as mail when WeCom doesn't return an email. Leave blank to skip — real WeCom emails always take priority." data-zh="当企微未返回邮箱时，自动生成 uid + 后缀作为 mail；留空则跳过。企微返回的真实邮箱始终优先。">Generate uid + suffix as mail when WeCom doesn't return an email. Leave blank to skip — real WeCom emails always take priority.</td></tr>
           </tbody>
         </table>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FAQ ────────────────────────────────────────────────── -->
+<section id="faq">
+  <div class="wrap">
+    <div class="section-head center reveal">
+      <div class="section-eyebrow" data-en="FAQ" data-zh="常见问题">FAQ</div>
+      <h2 class="section-title"
+          data-en="Questions people actually ask."
+          data-zh="大家常问的问题。">Questions people actually ask.</h2>
+      <p class="section-sub"
+         data-en="Quick answers to the recurring questions about WeCom sync, email fallbacks, password handling, and what happens when employees leave."
+         data-zh="关于企业微信同步、邮箱回退、密码处理、离职清理等高频问题的快速答复。">
+         Quick answers to the recurring questions about WeCom sync, email fallbacks, password handling, and what happens when employees leave.
+      </p>
+    </div>
+
+    <div class="faq-list reveal">
+      <details class="faq-item">
+        <summary data-en="How often does the sync run? Can I change the interval?"
+                 data-zh="同步多久跑一次？可以改吗？">How often does the sync run? Can I change the interval?</summary>
+        <p class="faq-a"
+           data-en="Every 30 minutes by default. Set SYNC_INTERVAL_MINUTES in your .env file to change it. The sync also runs once immediately when the container starts, so you don't have to wait for the first tick."
+           data-zh="默认每 30 分钟一次。修改 .env 中的 SYNC_INTERVAL_MINUTES 即可调整周期。容器启动时会立即跑一次，不必等到下一个周期触发。">
+           Every 30 minutes by default. Set SYNC_INTERVAL_MINUTES in your .env file to change it. The sync also runs once immediately when the container starts, so you don't have to wait for the first tick.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary data-en="Why isn't WeCom returning email or phone numbers for my users?"
+                 data-zh="为什么企业微信没有返回邮箱和手机号？">Why isn't WeCom returning email or phone numbers for my users?</summary>
+        <p class="faq-a"
+           data-en="WeCom treats email and mobile as sensitive fields and only returns them for verified organizations (已验证企业). For unverified orgs the API returns empty strings. As a workaround, set EMAIL_SUFFIX=@yourdomain.com and the sync will generate uid@yourdomain.com as the mail attribute. Real WeCom emails always take priority when present."
+           data-zh="企业微信把邮箱和手机号列为敏感字段，仅对「已验证企业」开放，未验证企业接口返回空字符串。作为变通，可以在 .env 设置 EMAIL_SUFFIX=@yourdomain.com，同步时会自动生成 uid@yourdomain.com 作为 mail。企微若返回真实邮箱，则以真实邮箱为准。">
+           WeCom treats email and mobile as sensitive fields and only returns them for verified organizations (已验证企业). For unverified orgs the API returns empty strings. As a workaround, set EMAIL_SUFFIX=@yourdomain.com and the sync will generate uid@yourdomain.com as the mail attribute. Real WeCom emails always take priority when present.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary data-en="What happens when an employee leaves the company?"
+                 data-zh="员工离职后，LDAP 里的账号怎么处理？">What happens when an employee leaves the company?</summary>
+        <p class="faq-a"
+           data-en="With SYNC_DELETE_ORPHANS=true (the default), users that no longer exist in WeCom are removed from LDAP on the next sync. Set it to false if you'd rather keep historical entries — useful when downstream systems still reference them."
+           data-zh="默认 SYNC_DELETE_ORPHANS=true，企微里已不存在的用户会在下一次同步时从 LDAP 删除。如果希望保留历史账号（例如下游系统仍在引用），把它设为 false 即可。">
+           With SYNC_DELETE_ORPHANS=true (the default), users that no longer exist in WeCom are removed from LDAP on the next sync. Set it to false if you'd rather keep historical entries — useful when downstream systems still reference them.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary data-en="How are passwords set on synced LDAP users?"
+                 data-zh="同步出来的用户，密码是怎么设置的？">How are passwords set on synced LDAP users?</summary>
+        <p class="faq-a"
+           data-en="New users receive LDAP_DEFAULT_PASSWORD (SSHA-hashed). Existing users without a password also receive it on the next sync. Users who already have a password are never overwritten, so they can change their own credentials safely without worrying about being reset."
+           data-zh="新用户的密码会被设为 LDAP_DEFAULT_PASSWORD（SSHA 加密）。已存在但还没有密码的用户，会在下次同步时补设。已经有密码的用户不会被覆盖 —— 用户自己改完密码后不会被同步重置。">
+           New users receive LDAP_DEFAULT_PASSWORD (SSHA-hashed). Existing users without a password also receive it on the next sync. Users who already have a password are never overwritten, so they can change their own credentials safely without worrying about being reset.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary data-en="Can I preview changes before they hit LDAP?"
+                 data-zh="能不能先预览要做的改动，不真的写入 LDAP？">Can I preview changes before they hit LDAP?</summary>
+        <p class="faq-a"
+           data-en="Yes. Set DRY_RUN=true in .env and the sync logs every operation it would perform without writing anything. Once the diff looks right, set it back to false."
+           data-zh="可以。在 .env 中设置 DRY_RUN=true，同步会把所有「将要执行的操作」打印到日志，但不实际写入 LDAP。确认无误后改回 false 即可。">
+           Yes. Set DRY_RUN=true in .env and the sync logs every operation it would perform without writing anything. Once the diff looks right, set it back to false.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary data-en="Does this support DingTalk (钉钉) or Feishu (飞书)?"
+                 data-zh="支持钉钉、飞书吗？">Does this support DingTalk (钉钉) or Feishu (飞书)?</summary>
+        <p class="faq-a"
+           data-en="Not yet — both are on the roadmap. The architecture is platform-agnostic, so adding a new source is mostly a matter of writing a new fetcher. Issues and PRs are welcome."
+           data-zh="暂未支持，但都在路线图上。架构本身与具体平台解耦，新接入一个来源主要就是写一个新的 fetcher。欢迎 Issue 和 PR。">
+           Not yet — both are on the roadmap. The architecture is platform-agnostic, so adding a new source is mostly a matter of writing a new fetcher. Issues and PRs are welcome.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary data-en="Do I need to expose LDAP publicly on the internet?"
+                 data-zh="需要把 LDAP 暴露到公网吗？">Do I need to expose LDAP publicly on the internet?</summary>
+        <p class="faq-a"
+           data-en="No. The sync container talks to OpenLDAP over the internal Docker network. Only expose ports 389/636 to the LAN clients that need them. LDAPS is supported via LDAP_TLS=true if you want encrypted transport on the wire."
+           data-zh="不需要。同步容器通过 Docker 内网与 OpenLDAP 通信，只需把 389/636 暴露给真正需要的局域网客户端即可。如果希望走加密通道，把 LDAP_TLS=true 开启 LDAPS 即可。">
+           No. The sync container talks to OpenLDAP over the internal Docker network. Only expose ports 389/636 to the LAN clients that need them. LDAPS is supported via LDAP_TLS=true if you want encrypted transport on the wire.
+        </p>
       </details>
     </div>
   </div>
