@@ -1,0 +1,1097 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>sync-ldap · WeCom → OpenLDAP, on a cron</title>
+<meta name="description" content="A tiny Docker service that mirrors your WeCom (企业微信) directory into OpenLDAP. Set it up in five minutes, forget about it for years." />
+<meta property="og:title" content="sync-ldap — WeCom → OpenLDAP, on a cron" />
+<meta property="og:description" content="Drop-in Docker service that mirrors WeCom contacts into OpenLDAP. Departments, users, groups, passwords — all handled." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%2307c160'/%3E%3Cstop offset='1' stop-color='%235b6cff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M9 11h14M9 16h14M9 21h8' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg: #07090f;
+    --bg-soft: #0d1018;
+    --bg-elev: #11141d;
+    --card: rgba(255,255,255,0.025);
+    --card-hover: rgba(255,255,255,0.045);
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #e7e9ee;
+    --text-dim: #aab0bc;
+    --text-mute: #6c7280;
+    --green: #07c160;       /* WeCom brand */
+    --indigo: #5b6cff;      /* LDAP-y blue */
+    --amber: #ffb454;
+    --red: #ff5d6c;
+    --grad: linear-gradient(135deg, #07c160 0%, #28d4a0 35%, #5b6cff 100%);
+    --grad-soft: linear-gradient(135deg, rgba(7,193,96,0.18), rgba(91,108,255,0.18));
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Inter', 'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --radius-sm: 8px;
+    --radius: 12px;
+    --radius-lg: 18px;
+    --shadow: 0 10px 40px -12px rgba(0,0,0,0.5);
+    --shadow-glow: 0 0 80px -20px rgba(91,108,255,0.35);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans);
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    overflow-x:hidden;
+  }
+  :lang(zh) body, body[data-lang="zh"]{font-family:'Noto Sans SC','Inter',system-ui,sans-serif}
+
+  /* Background grid + gradient */
+  body::before{
+    content:"";
+    position:fixed;inset:0;
+    background:
+      radial-gradient(ellipse 800px 500px at 70% -10%, rgba(91,108,255,0.18), transparent 60%),
+      radial-gradient(ellipse 700px 400px at 10% 30%, rgba(7,193,96,0.10), transparent 60%);
+    pointer-events:none;
+    z-index:0;
+  }
+  body::after{
+    content:"";
+    position:fixed;inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size:48px 48px;
+    -webkit-mask-image:radial-gradient(ellipse 1100px 700px at 50% 0%, black 0%, transparent 70%);
+            mask-image:radial-gradient(ellipse 1100px 700px at 50% 0%, black 0%, transparent 70%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  a{color:inherit;text-decoration:none}
+  a:hover{color:#fff}
+
+  /* ─── Layout ─────────────────────────────────────────────── */
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px;position:relative;z-index:1}
+
+  /* ─── Header ─────────────────────────────────────────────── */
+  header{
+    position:sticky;top:0;z-index:50;
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    background:rgba(7,9,15,0.7);
+    border-bottom:1px solid transparent;
+    transition:border-color .2s;
+  }
+  header.scrolled{border-bottom-color:var(--border)}
+  .nav{
+    display:flex;align-items:center;justify-content:space-between;
+    height:64px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em}
+  .brand-mark{
+    width:28px;height:28px;border-radius:7px;
+    background:var(--grad);
+    display:grid;place-items:center;
+    box-shadow:0 4px 16px -4px rgba(91,108,255,0.5);
+  }
+  .brand-mark svg{width:16px;height:16px;color:white}
+  .brand-name{font-size:15px}
+  .brand-name span{color:var(--text-mute);font-weight:500}
+
+  .nav-links{display:flex;gap:28px;align-items:center}
+  .nav-links a{
+    font-size:14px;color:var(--text-dim);font-weight:500;
+    transition:color .15s;
+  }
+  .nav-links a:hover{color:var(--text)}
+
+  .nav-actions{display:flex;align-items:center;gap:10px}
+  .lang-toggle{
+    display:flex;background:var(--card);border:1px solid var(--border);
+    border-radius:999px;padding:3px;font-size:12px;font-weight:600;
+  }
+  .lang-toggle button{
+    border:0;background:transparent;color:var(--text-mute);
+    padding:5px 12px;border-radius:999px;cursor:pointer;
+    font-family:inherit;font-weight:600;font-size:12px;
+    transition:all .2s;
+  }
+  .lang-toggle button.active{background:var(--text);color:var(--bg)}
+
+  .gh-btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:8px 14px;border-radius:8px;
+    background:var(--card);border:1px solid var(--border);
+    font-size:13px;font-weight:600;
+    transition:all .2s;
+  }
+  .gh-btn:hover{background:var(--card-hover);border-color:var(--border-strong)}
+  .gh-btn svg{width:14px;height:14px}
+  .star-count{
+    color:var(--text-mute);
+    padding-left:8px;margin-left:2px;
+    border-left:1px solid var(--border);
+  }
+
+  @media (max-width:760px){
+    .nav-links{display:none}
+    .star-count{display:none}
+  }
+
+  /* ─── Hero ───────────────────────────────────────────────── */
+  .hero{padding:90px 0 60px;text-align:center;position:relative}
+  .badge{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 14px;border-radius:999px;
+    background:var(--card);border:1px solid var(--border);
+    font-size:12px;color:var(--text-dim);font-weight:500;
+    margin-bottom:28px;
+  }
+  .badge-dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--green);box-shadow:0 0 8px var(--green);
+    animation:pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:.6;transform:scale(1.2)}
+  }
+
+  h1.hero-title{
+    font-size:clamp(44px,7vw,84px);
+    line-height:1.05;
+    letter-spacing:-0.035em;
+    font-weight:800;
+    margin:0 0 24px;
+  }
+  .hero-title .grad{
+    background:var(--grad);
+    -webkit-background-clip:text;background-clip:text;
+    color:transparent;
+  }
+  .hero-arrow{
+    display:inline-block;
+    margin:0 14px;
+    color:var(--text-mute);
+    font-weight:400;
+    transform:translateY(-6px);
+  }
+  .hero-sub{
+    font-size:clamp(16px,1.6vw,19px);
+    color:var(--text-dim);
+    max-width:640px;margin:0 auto 44px;
+    line-height:1.6;
+  }
+
+  .hero-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:64px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:13px 22px;border-radius:10px;
+    font-size:14px;font-weight:600;
+    transition:all .2s;cursor:pointer;border:0;
+    font-family:inherit;
+  }
+  .btn-primary{
+    background:var(--grad);color:white;
+    box-shadow:0 8px 28px -8px rgba(91,108,255,0.5);
+  }
+  .btn-primary:hover{
+    transform:translateY(-1px);
+    box-shadow:0 12px 32px -8px rgba(91,108,255,0.6);
+    color:white;
+  }
+  .btn-ghost{
+    background:var(--card);
+    color:var(--text);
+    border:1px solid var(--border);
+  }
+  .btn-ghost:hover{background:var(--card-hover);border-color:var(--border-strong)}
+
+  /* Terminal */
+  .terminal{
+    max-width:760px;margin:0 auto;
+    background:linear-gradient(180deg, #0e1119 0%, #0a0d14 100%);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+    box-shadow:var(--shadow), var(--shadow-glow);
+    text-align:left;
+  }
+  .terminal-bar{
+    display:flex;align-items:center;
+    padding:12px 16px;
+    border-bottom:1px solid var(--border);
+    background:rgba(255,255,255,0.02);
+  }
+  .terminal-dots{display:flex;gap:6px}
+  .terminal-dots span{
+    width:11px;height:11px;border-radius:50%;
+    background:rgba(255,255,255,0.12);
+  }
+  .terminal-dots span:nth-child(1){background:#ff5d6c}
+  .terminal-dots span:nth-child(2){background:#ffb454}
+  .terminal-dots span:nth-child(3){background:#28d4a0}
+  .terminal-title{
+    flex:1;text-align:center;
+    font-family:var(--mono);font-size:12px;
+    color:var(--text-mute);
+    margin-right:60px;
+  }
+  .terminal-body{
+    padding:22px 24px;
+    font-family:var(--mono);
+    font-size:13.5px;
+    line-height:1.75;
+    color:var(--text-dim);
+    min-height:220px;
+  }
+  .terminal-body .prompt{color:var(--green);user-select:none}
+  .terminal-body .cmd{color:var(--text)}
+  .terminal-body .out{color:var(--text-mute);font-size:12.5px}
+  .terminal-body .out .ok{color:var(--green)}
+  .terminal-body .out .info{color:var(--indigo)}
+  .terminal-body .out .num{color:var(--amber)}
+  .terminal-body .cursor{
+    display:inline-block;width:8px;height:16px;
+    background:var(--text);vertical-align:text-bottom;
+    animation:blink 1s steps(2) infinite;
+  }
+  @keyframes blink{50%{opacity:0}}
+
+  /* ─── Section base ──────────────────────────────────────── */
+  section{padding:90px 0;position:relative}
+  .section-eyebrow{
+    font-size:12px;font-weight:600;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--green);
+    margin-bottom:14px;
+  }
+  .section-title{
+    font-size:clamp(30px,4vw,44px);
+    letter-spacing:-0.025em;font-weight:700;
+    margin:0 0 16px;line-height:1.15;
+  }
+  .section-sub{
+    color:var(--text-dim);
+    font-size:17px;max-width:580px;line-height:1.6;
+    margin:0 0 56px;
+  }
+  .section-head.center{text-align:center}
+  .section-head.center .section-sub{margin-left:auto;margin-right:auto}
+
+  /* ─── How it works (architecture) ───────────────────────── */
+  .arch{
+    display:grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap:24px;align-items:center;
+    margin-top:24px;
+  }
+  .arch-node{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:28px 24px;
+    text-align:center;
+    transition:all .25s;
+  }
+  .arch-node:hover{
+    background:var(--card-hover);
+    border-color:var(--border-strong);
+    transform:translateY(-3px);
+  }
+  .arch-node .icon{
+    width:52px;height:52px;border-radius:14px;
+    margin:0 auto 16px;
+    display:grid;place-items:center;
+    background:var(--grad-soft);
+    border:1px solid var(--border);
+  }
+  .arch-node .icon svg{width:24px;height:24px}
+  .arch-node h4{
+    font-size:16px;font-weight:700;
+    margin:0 0 6px;
+  }
+  .arch-node p{
+    margin:0;color:var(--text-mute);font-size:13px;
+  }
+  .arch-node .tag{
+    display:inline-block;
+    margin-top:10px;
+    font-family:var(--mono);font-size:11px;
+    color:var(--text-mute);
+    padding:3px 8px;border-radius:5px;
+    background:rgba(255,255,255,0.04);
+  }
+  .arch-arrow{
+    color:var(--text-mute);
+    font-family:var(--mono);
+    font-size:24px;
+    display:grid;place-items:center;
+    height:24px;
+  }
+  .arch-arrow svg{width:32px}
+  @media(max-width:880px){
+    .arch{grid-template-columns:1fr;gap:14px}
+    .arch-arrow{transform:rotate(90deg);margin:4px auto;height:auto}
+  }
+
+  /* ─── Features ──────────────────────────────────────────── */
+  .features{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:18px;
+  }
+  .feature{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:28px;
+    transition:all .25s;
+    position:relative;overflow:hidden;
+  }
+  .feature::before{
+    content:"";
+    position:absolute;inset:0;
+    background:radial-gradient(circle at top right, rgba(91,108,255,0.08), transparent 50%);
+    opacity:0;transition:opacity .3s;
+  }
+  .feature:hover{
+    background:var(--card-hover);
+    border-color:var(--border-strong);
+    transform:translateY(-3px);
+  }
+  .feature:hover::before{opacity:1}
+  .feature-icon{
+    width:42px;height:42px;border-radius:10px;
+    background:var(--grad-soft);
+    border:1px solid var(--border);
+    display:grid;place-items:center;
+    margin-bottom:18px;
+    color:var(--green);
+  }
+  .feature-icon svg{width:20px;height:20px}
+  .feature h3{
+    font-size:16px;font-weight:700;
+    margin:0 0 8px;letter-spacing:-.005em;
+  }
+  .feature p{
+    margin:0;color:var(--text-dim);font-size:14px;line-height:1.6;
+  }
+  @media(max-width:880px){.features{grid-template-columns:1fr}}
+
+  /* ─── Quick Start ───────────────────────────────────────── */
+  .qs-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:20px;
+    align-items:flex-start;
+  }
+  @media(max-width:880px){.qs-grid{grid-template-columns:1fr}}
+  .step{
+    display:flex;gap:18px;
+    margin-bottom:28px;
+  }
+  .step-num{
+    flex-shrink:0;
+    width:32px;height:32px;border-radius:50%;
+    background:var(--grad);color:white;
+    display:grid;place-items:center;
+    font-weight:700;font-size:14px;
+    box-shadow:0 4px 14px -4px rgba(91,108,255,0.5);
+  }
+  .step-body h4{
+    margin:5px 0 6px;
+    font-size:16px;font-weight:700;letter-spacing:-.005em;
+  }
+  .step-body p{
+    margin:0;color:var(--text-dim);font-size:14px;
+    line-height:1.6;
+  }
+  .step-body code{
+    font-family:var(--mono);
+    font-size:12px;
+    background:rgba(255,255,255,0.06);
+    padding:1px 6px;border-radius:4px;
+    color:var(--text);
+  }
+
+  .code-block{
+    position:sticky;top:90px;
+    background:linear-gradient(180deg, #0e1119 0%, #0a0d14 100%);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .code-block-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 16px;
+    border-bottom:1px solid var(--border);
+    background:rgba(255,255,255,0.02);
+    font-family:var(--mono);font-size:11.5px;
+    color:var(--text-mute);
+  }
+  .code-copy{
+    border:0;background:transparent;
+    color:var(--text-mute);
+    cursor:pointer;font-family:inherit;font-size:11.5px;
+    padding:3px 8px;border-radius:5px;
+    transition:all .15s;
+  }
+  .code-copy:hover{color:var(--text);background:rgba(255,255,255,0.05)}
+  .code-copy.copied{color:var(--green)}
+  pre.code{
+    margin:0;padding:18px 20px;
+    font-family:var(--mono);font-size:13px;line-height:1.65;
+    color:var(--text-dim);
+    overflow-x:auto;
+  }
+  pre.code .c{color:var(--text-mute);font-style:italic}
+  pre.code .k{color:#ff8fa3}
+  pre.code .s{color:#28d4a0}
+  pre.code .v{color:#a4b3ff}
+  pre.code .n{color:var(--amber)}
+
+  /* ─── Config table ──────────────────────────────────────── */
+  .cfg{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+  }
+  .cfg-section{border-bottom:1px solid var(--border)}
+  .cfg-section:last-child{border-bottom:0}
+  .cfg-section summary{
+    padding:18px 24px;
+    font-weight:600;font-size:15px;
+    cursor:pointer;
+    display:flex;align-items:center;gap:12px;
+    list-style:none;
+    transition:background .15s;
+  }
+  .cfg-section summary::-webkit-details-marker{display:none}
+  .cfg-section summary:hover{background:var(--card-hover)}
+  .cfg-section summary::after{
+    content:"";
+    margin-left:auto;
+    width:8px;height:8px;
+    border-right:2px solid var(--text-mute);
+    border-bottom:2px solid var(--text-mute);
+    transform:rotate(-45deg);
+    transition:transform .2s;
+  }
+  .cfg-section[open] summary::after{transform:rotate(45deg)}
+  .cfg-section .cfg-icon{
+    width:28px;height:28px;border-radius:7px;
+    background:var(--grad-soft);border:1px solid var(--border);
+    display:grid;place-items:center;
+  }
+  .cfg-section .cfg-icon svg{width:14px;height:14px;color:var(--green)}
+  .cfg-table{
+    width:100%;border-collapse:collapse;
+    font-size:13.5px;
+  }
+  .cfg-table th, .cfg-table td{
+    padding:10px 24px;
+    text-align:left;
+    border-top:1px solid var(--border);
+    vertical-align:top;
+  }
+  .cfg-table th{
+    color:var(--text-mute);font-weight:500;font-size:11px;
+    letter-spacing:.08em;text-transform:uppercase;
+    padding-top:14px;padding-bottom:10px;
+  }
+  .cfg-table tr:last-child td{padding-bottom:18px}
+  .cfg-table code{
+    font-family:var(--mono);font-size:12.5px;
+    color:#a4b3ff;
+  }
+  .cfg-table .default{
+    font-family:var(--mono);font-size:12px;
+    color:var(--text-mute);
+  }
+  .cfg-table .desc{color:var(--text-dim);max-width:520px}
+
+  /* ─── Roadmap / FAQ ─────────────────────────────────────── */
+  .roadmap{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:18px;
+  }
+  .roadmap-item{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:24px;
+  }
+  .roadmap-item .status{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:11px;font-weight:600;letter-spacing:.06em;
+    text-transform:uppercase;
+    padding:3px 10px;border-radius:999px;
+    margin-bottom:14px;
+  }
+  .roadmap-item.done .status{
+    background:rgba(7,193,96,0.12);color:var(--green);
+  }
+  .roadmap-item.next .status{
+    background:rgba(255,180,84,0.12);color:var(--amber);
+  }
+  .roadmap-item.idea .status{
+    background:rgba(255,255,255,0.06);color:var(--text-dim);
+  }
+  .roadmap-item h4{
+    margin:0 0 6px;font-size:16px;font-weight:700;
+  }
+  .roadmap-item p{margin:0;color:var(--text-dim);font-size:14px;line-height:1.5}
+  @media(max-width:880px){.roadmap{grid-template-columns:1fr}}
+
+  /* ─── CTA ───────────────────────────────────────────────── */
+  .cta-card{
+    margin-top:30px;
+    background:
+      radial-gradient(ellipse 600px 240px at 50% 0%, rgba(91,108,255,0.18), transparent 70%),
+      var(--card);
+    border:1px solid var(--border-strong);
+    border-radius:var(--radius-lg);
+    padding:60px 40px;
+    text-align:center;
+  }
+  .cta-card h2{
+    font-size:clamp(26px,3.4vw,38px);
+    letter-spacing:-.02em;
+    margin:0 0 14px;
+  }
+  .cta-card p{
+    color:var(--text-dim);
+    margin:0 auto 28px;max-width:480px;
+  }
+
+  /* ─── Footer ────────────────────────────────────────────── */
+  footer{
+    border-top:1px solid var(--border);
+    padding:36px 0 56px;
+    margin-top:40px;
+    color:var(--text-mute);
+    font-size:13px;
+  }
+  footer .footer-inner{
+    display:flex;justify-content:space-between;align-items:center;
+    flex-wrap:wrap;gap:14px;
+  }
+  footer a{color:var(--text-dim)}
+  footer a:hover{color:var(--text)}
+
+  /* Reveal on scroll */
+  .reveal{opacity:0;transform:translateY(16px);transition:all .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  /* Hide [data-zh] when EN, and vice versa, via attribute on <html> */
+  html[lang="en"] [data-zh]{display:none}
+  html[lang="zh"] [data-en]{display:none}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="wrap nav">
+    <a href="#" class="brand" aria-label="sync-ldap">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7h16M4 12h16M4 17h10"/>
+        </svg>
+      </span>
+      <span class="brand-name">sync-ldap <span data-en="·  WeCom → LDAP" data-zh="·  企微 → LDAP"></span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#how" data-en="How it works" data-zh="工作原理"></a>
+      <a href="#features" data-en="Features" data-zh="特性"></a>
+      <a href="#quickstart" data-en="Quick Start" data-zh="快速开始"></a>
+      <a href="#config" data-en="Configuration" data-zh="配置"></a>
+      <a href="#roadmap" data-en="Roadmap" data-zh="路线图"></a>
+    </nav>
+    <div class="nav-actions">
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button data-set-lang="en" class="active">EN</button>
+        <button data-set-lang="zh">中文</button>
+      </div>
+      <a class="gh-btn" href="https://github.com/caoool/sync-ldap" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        <span>Star</span>
+        <span class="star-count" id="starCount">—</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="wrap">
+    <div class="badge">
+      <span class="badge-dot"></span>
+      <span data-en="Self-hosted · Docker · Apache-2.0" data-zh="自托管 · Docker · Apache-2.0"></span>
+    </div>
+    <h1 class="hero-title">
+      <span data-en="WeCom" data-zh="企业微信"></span>
+      <span class="hero-arrow">→</span>
+      <span class="grad">OpenLDAP</span><br/>
+      <span data-en="on a five-minute setup." data-zh="五分钟接入，自动同步。"></span>
+    </h1>
+    <p class="hero-sub"
+       data-en="A tiny Docker service that mirrors your WeCom (企业微信) directory into OpenLDAP. Departments, users, groups, passwords — synced on a cron, then forgotten."
+       data-zh="一个轻量的 Docker 服务，把你的企业微信通讯录自动同步到 OpenLDAP — 部门、人员、分组、密码全自动，定时跑一次，之后再也不用管。">
+    </p>
+    <div class="hero-cta">
+      <a href="#quickstart" class="btn btn-primary">
+        <span data-en="Get Started" data-zh="立即开始"></span>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14"><path d="M5 3l5 5-5 5"/></svg>
+      </a>
+      <a href="https://github.com/caoool/sync-ldap" target="_blank" rel="noopener" class="btn btn-ghost">
+        <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span data-en="View on GitHub" data-zh="GitHub 仓库"></span>
+      </a>
+    </div>
+
+    <!-- Terminal demo -->
+    <div class="terminal" aria-hidden="true">
+      <div class="terminal-bar">
+        <div class="terminal-dots"><span></span><span></span><span></span></div>
+        <div class="terminal-title">~/sync-ldap</div>
+      </div>
+      <div class="terminal-body" id="term">
+        <div><span class="prompt">$</span> <span class="cmd">cp .env.example .env  &amp;&amp;  vim .env</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">docker compose up -d</span></div>
+        <div class="out">[+] Running 2/2</div>
+        <div class="out"> ✔ Container <span class="info">openldap</span>          Started</div>
+        <div class="out"> ✔ Container <span class="info">wecom-ldap-sync</span>   Started</div>
+        <br/>
+        <div class="out">[INFO] wecom: Fetched <span class="num">14</span> departments</div>
+        <div class="out">[INFO] wecom: Fetched <span class="num">128</span> unique users</div>
+        <div class="out">[INFO] sync:  Sync completed: <span class="num">14</span> depts, <span class="num">128</span> created, <span class="num">0</span> updated, <span class="num">0</span> deleted <span class="ok">✓</span></div>
+        <div class="out">[INFO] main:  Scheduler started — syncing every <span class="num">30</span> minutes<span class="cursor"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how">
+  <div class="wrap">
+    <div class="section-head center reveal">
+      <div class="section-eyebrow" data-en="How it works" data-zh="工作原理"></div>
+      <h2 class="section-title" data-en="One service. Three moving parts." data-zh="一个服务，三个部件。"></h2>
+      <p class="section-sub"
+         data-en="The sync container reads your WeCom directory through a self-built app, then writes a faithful copy into OpenLDAP — every 30 minutes by default."
+         data-zh="同步容器通过企业微信「自建应用」读取通讯录，按部门层级原样写入到 OpenLDAP — 默认每 30 分钟一次。">
+      </p>
+    </div>
+
+    <div class="arch reveal">
+      <div class="arch-node">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#07c160" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <h4 data-en="WeCom" data-zh="企业微信"></h4>
+        <p data-en="Your org's directory" data-zh="组织通讯录"></p>
+        <div class="tag">企业微信 API</div>
+      </div>
+
+      <div class="arch-arrow">
+        <svg viewBox="0 0 32 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6h26M22 1l6 5-6 5" stroke-dasharray="3 3"/></svg>
+      </div>
+
+      <div class="arch-node">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#5b6cff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </div>
+        <h4>wecom-ldap-sync</h4>
+        <p data-en="Python · APScheduler · ldap3" data-zh="Python · APScheduler · ldap3"></p>
+        <div class="tag" data-en="every 30 min" data-zh="每 30 分钟"></div>
+      </div>
+
+      <div class="arch-arrow">
+        <svg viewBox="0 0 32 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6h26M22 1l6 5-6 5" stroke-dasharray="3 3"/></svg>
+      </div>
+
+      <div class="arch-node">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#5b6cff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        </div>
+        <h4>OpenLDAP</h4>
+        <p data-en="Mirrored OU tree" data-zh="同步的 OU 层级"></p>
+        <div class="tag">389 / 636</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="wrap">
+    <div class="section-head center reveal">
+      <div class="section-eyebrow" data-en="What's inside" data-zh="特性"></div>
+      <h2 class="section-title" data-en="Small surface, sensible defaults." data-zh="功能克制，默认靠谱。"></h2>
+      <p class="section-sub"
+         data-en="Everything you'd expect from a directory sync — and nothing you wouldn't."
+         data-zh="一个通讯录同步工具该有的都有，多余的没有。">
+      </p>
+    </div>
+
+    <div class="features">
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM3 9h18M9 21V9"/></svg>
+        </div>
+        <h3 data-en="Mirrored department tree" data-zh="部门层级原样镜像"></h3>
+        <p data-en="WeCom departments become OpenLDAP organizationalUnits — the full hierarchy, with parents, children, and renames handled."
+           data-zh="企微部门会被映射为 OpenLDAP 的 organizationalUnit；父子关系、改名、嵌套层级都自动处理。"></p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 11h-6M23 8v6"/></svg>
+        </div>
+        <h3 data-en="Users, attributes, moves" data-zh="人员属性 & 调岗"></h3>
+        <p data-en="Name, position, alias, email, department — all synced. When someone changes department in WeCom, their LDAP entry moves with them."
+           data-zh="姓名、职位、别名、邮箱、部门 —— 全量同步。员工调岗后，LDAP 中的 entry 也会跟随转移。"></p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <h3 data-en="Default password, SSHA-hashed" data-zh="默认密码（SSHA 加密）"></h3>
+        <p data-en="Set LDAP_DEFAULT_PASSWORD and new users get it on creation. Existing users with no password get it on the next pass — set ones are never overwritten."
+           data-zh="设置 LDAP_DEFAULT_PASSWORD，新建用户即获得；已有用户若没设过密码，下一轮会补上 —— 已有的密码绝不会被覆盖。"></p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h3 data-en="Runs on a cron, sensibly" data-zh="定时同步，从不打扰"></h3>
+        <p data-en="APScheduler keeps a single instance running every SYNC_INTERVAL_MINUTES (default 30). Coalesces missed runs, no duplicate jobs."
+           data-zh="APScheduler 按 SYNC_INTERVAL_MINUTES（默认 30 分钟）执行，单例运行；错过的执行会自动合并，不会重复。"></p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        </div>
+        <h3 data-en="Dry-run before you commit" data-zh="干跑模式，预览改动"></h3>
+        <p data-en="Set DRY_RUN=true to log everything that would change without touching LDAP. Confidence before commitment."
+           data-zh="设置 DRY_RUN=true 即可只打日志、不写入 LDAP；先看清楚再上线。"></p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        </div>
+        <h3 data-en="Optional orphan cleanup" data-zh="可选：清理离职账号"></h3>
+        <p data-en="With SYNC_DELETE_ORPHANS=true, users removed from WeCom are also removed from LDAP. Off by default for safety."
+           data-zh="开启 SYNC_DELETE_ORPHANS=true 后，企微中已离职的人会从 LDAP 同步删除。默认关闭，谨慎使用。"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Quick Start -->
+<section id="quickstart">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-eyebrow" data-en="Quick Start" data-zh="快速开始"></div>
+      <h2 class="section-title" data-en="From zero to synced in five minutes." data-zh="从零到完成同步，只要五分钟。"></h2>
+      <p class="section-sub"
+         data-en="You'll need: Docker, a WeCom corp admin account, and a server with a stable IP."
+         data-zh="你需要：Docker、企业微信管理员账号、一个 IP 稳定的服务器。">
+      </p>
+    </div>
+
+    <div class="qs-grid">
+      <div class="reveal">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4 data-en="Create a WeCom self-built app" data-zh="创建企业微信自建应用"></h4>
+            <p data-en="Log into the WeCom Admin Console. Go to 应用管理 → 自建, create an app, and grant it 通讯录读取 permission. Copy the Corp ID (我的企业 → 企业信息) and the app's Secret. Add your server IP to the app's 企业可信IP list."
+               data-zh="登录企业微信管理后台，进入「应用管理 → 自建」，创建应用并授予「通讯录读取」权限。拷贝「我的企业 → 企业信息」中的企业 ID，以及自建应用详情中的 Secret。把服务器 IP 加入应用的「企业可信IP」白名单。"></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4 data-en="Clone & configure" data-zh="克隆并配置"></h4>
+            <p data-en="Clone the repo and copy .env.example to .env. Fill in your LDAP base DN, admin password, WeCom Corp ID and Secret."
+               data-zh="克隆仓库，把 .env.example 复制为 .env，填入 LDAP 的 base DN、管理员密码，以及企业微信的 Corp ID 与 Secret。"></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4 data-en="Lift off" data-zh="启动"></h4>
+            <p data-en="Run docker compose up -d. Watch the logs — you should see departments and users flowing into LDAP within seconds."
+               data-zh="执行 docker compose up -d，观察日志 —— 部门和人员数据会在数秒内同步进 LDAP。"></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4 data-en="Verify" data-zh="验证"></h4>
+            <p data-en="Connect any LDAP client to localhost:389 with your admin DN, or browse the tree with phpLDAPadmin. That's it — re-sync runs every 30 minutes."
+               data-zh="用任意 LDAP 客户端以管理员 DN 连接 localhost:389；或用 phpLDAPadmin 直接浏览目录树。完成 —— 之后每 30 分钟自动同步一次。"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <div class="code-block">
+          <div class="code-block-bar">
+            <span>shell</span>
+            <button class="code-copy" data-copy="qs-cmd">Copy</button>
+          </div>
+<pre class="code" id="qs-cmd"><span class="c"># 1. Clone</span>
+git clone https://github.com/caoool/sync-ldap.git
+<span class="k">cd</span> sync-ldap
+
+<span class="c"># 2. Configure</span>
+cp .env.example .env
+<span class="c"># edit .env with your editor of choice</span>
+<span class="v">$EDITOR</span> .env
+
+<span class="c"># 3. Launch</span>
+docker compose up -d
+
+<span class="c"># 4. Tail the logs</span>
+docker compose logs -f wecom-ldap-sync</pre>
+        </div>
+
+        <div class="code-block" style="margin-top:18px">
+          <div class="code-block-bar">
+            <span>.env (excerpt)</span>
+            <button class="code-copy" data-copy="qs-env">Copy</button>
+          </div>
+<pre class="code" id="qs-env"><span class="c"># ─── LDAP ───────────────────────────────</span>
+<span class="v">LDAP_DOMAIN</span>=<span class="s">ldap.example.com</span>
+<span class="v">LDAP_BASE_DN</span>=<span class="s">dc=ldap,dc=example,dc=com</span>
+<span class="v">LDAP_ADMIN_PASSWORD</span>=<span class="s">change-me</span>
+<span class="v">LDAP_DEFAULT_PASSWORD</span>=<span class="s">welcome-2026</span>
+
+<span class="c"># ─── WeCom (企业微信) ───────────────────</span>
+<span class="v">WECOM_CORPID</span>=<span class="s">ww1234567890abcdef</span>
+<span class="v">WECOM_CORPSECRET</span>=<span class="s">your-app-secret-here</span>
+
+<span class="c"># ─── Sync ───────────────────────────────</span>
+<span class="v">SYNC_INTERVAL_MINUTES</span>=<span class="n">30</span>
+<span class="v">SYNC_DELETE_ORPHANS</span>=<span class="k">true</span>
+<span class="v">DRY_RUN</span>=<span class="k">false</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Configuration -->
+<section id="config">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-eyebrow" data-en="Configuration" data-zh="配置参考"></div>
+      <h2 class="section-title" data-en="Every knob, in one table." data-zh="所有可配置项，一张表说清楚。"></h2>
+      <p class="section-sub"
+         data-en="All variables live in your .env file. Sensible defaults; only the WeCom credentials are required."
+         data-zh="所有变量集中在 .env 中。默认值都是合理的，只有企业微信凭证是必填项。">
+      </p>
+    </div>
+
+    <div class="cfg reveal">
+      <details class="cfg-section" open>
+        <summary>
+          <span class="cfg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
+          <span data-en="LDAP" data-zh="LDAP"></span>
+        </summary>
+        <table class="cfg-table">
+          <thead><tr>
+            <th data-en="Variable" data-zh="变量"></th>
+            <th data-en="Default" data-zh="默认值"></th>
+            <th data-en="Description" data-zh="说明"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td><code>LDAP_ORGANISATION</code></td><td class="default">mycompany</td><td class="desc" data-en="Organization name shown in LDAP." data-zh="LDAP 中展示的组织名称。"></td></tr>
+            <tr><td><code>LDAP_DOMAIN</code></td><td class="default">ldap.example.com</td><td class="desc" data-en="Domain used by openldap to derive the base DN." data-zh="OpenLDAP 容器据此推导出 base DN 的域名。"></td></tr>
+            <tr><td><code>LDAP_BASE_DN</code></td><td class="default">dc=ldap,dc=example,dc=com</td><td class="desc" data-en="Must match LDAP_DOMAIN." data-zh="必须与 LDAP_DOMAIN 一致。"></td></tr>
+            <tr><td><code>LDAP_ADMIN_PASSWORD</code></td><td class="default">changeme</td><td class="desc" data-en="LDAP admin password — change this!" data-zh="LDAP 管理员密码 —— 务必修改！"></td></tr>
+            <tr><td><code>LDAP_USER_OU</code></td><td class="default">people</td><td class="desc" data-en="Top-level OU under base DN where users are placed." data-zh="放置用户的顶层 OU。"></td></tr>
+            <tr><td><code>LDAP_DEFAULT_PASSWORD</code></td><td class="default">changeme</td><td class="desc" data-en="Password assigned to new users (SSHA-hashed). Also applied to existing users without one. Never overwritten if already set." data-zh="新建用户的初始密码（SSHA 加密）；若已有用户没设密码也会补上；已设过的不会被覆盖。"></td></tr>
+            <tr><td><code>LDAP_TLS</code></td><td class="default">false</td><td class="desc" data-en="Enable LDAPS / StartTLS." data-zh="是否启用 LDAPS / StartTLS。"></td></tr>
+          </tbody>
+        </table>
+      </details>
+
+      <details class="cfg-section">
+        <summary>
+          <span class="cfg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+          <span data-en="WeCom (企业微信)" data-zh="企业微信"></span>
+        </summary>
+        <table class="cfg-table">
+          <thead><tr>
+            <th data-en="Variable" data-zh="变量"></th>
+            <th data-en="Default" data-zh="默认值"></th>
+            <th data-en="Description" data-zh="说明"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td><code>WECOM_CORPID</code></td><td class="default">—</td><td class="desc" data-en="Corp ID from 我的企业 → 企业信息." data-zh="来自「我的企业 → 企业信息」的企业 ID。"></td></tr>
+            <tr><td><code>WECOM_CORPSECRET</code></td><td class="default">—</td><td class="desc" data-en="Self-built app secret with 通讯录读取 permission." data-zh="拥有「通讯录读取」权限的自建应用 Secret。"></td></tr>
+          </tbody>
+        </table>
+      </details>
+
+      <details class="cfg-section">
+        <summary>
+          <span class="cfg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+          <span data-en="Sync &amp; Email" data-zh="同步与邮箱"></span>
+        </summary>
+        <table class="cfg-table">
+          <thead><tr>
+            <th data-en="Variable" data-zh="变量"></th>
+            <th data-en="Default" data-zh="默认值"></th>
+            <th data-en="Description" data-zh="说明"></th>
+          </tr></thead>
+          <tbody>
+            <tr><td><code>SYNC_INTERVAL_MINUTES</code></td><td class="default">30</td><td class="desc" data-en="How often to re-sync." data-zh="同步周期（分钟）。"></td></tr>
+            <tr><td><code>SYNC_DELETE_ORPHANS</code></td><td class="default">true</td><td class="desc" data-en="Delete LDAP users no longer in WeCom. Use with caution." data-zh="删除 LDAP 中已不在企微的用户；谨慎使用。"></td></tr>
+            <tr><td><code>DRY_RUN</code></td><td class="default">false</td><td class="desc" data-en="Preview changes without writing to LDAP." data-zh="预览模式 —— 只打日志，不写入 LDAP。"></td></tr>
+            <tr><td><code>EMAIL_SUFFIX</code></td><td class="default">@example.com</td><td class="desc" data-en="Auto-generate email as uid + suffix when WeCom doesn't return one. Leave blank to skip." data-zh="当企微未返回邮箱时，自动生成 uid + 后缀作为邮箱；留空则跳过。"></td></tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- Roadmap -->
+<section id="roadmap">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-eyebrow" data-en="Roadmap" data-zh="路线图"></div>
+      <h2 class="section-title" data-en="Where this is going." data-zh="后续计划。"></h2>
+      <p class="section-sub"
+         data-en="WeCom is the start. The plan is to make this work for any Chinese workplace platform — and merge them all into a single LDAP source of truth."
+         data-zh="企业微信只是起点。目标是支持所有主流国内办公平台，并把它们汇入同一个 LDAP 真相之源。">
+      </p>
+    </div>
+    <div class="roadmap">
+      <div class="roadmap-item done reveal">
+        <span class="status">● <span data-en="Shipped" data-zh="已发布"></span></span>
+        <h4 data-en="WeCom sync" data-zh="企业微信同步"></h4>
+        <p data-en="Departments, users, groups, default passwords, orphan cleanup, dry-run mode."
+           data-zh="部门、用户、分组、默认密码、离职清理、干跑模式。"></p>
+      </div>
+      <div class="roadmap-item next reveal">
+        <span class="status">○ <span data-en="In progress" data-zh="进行中"></span></span>
+        <h4 data-en="DingTalk (钉钉)" data-zh="钉钉"></h4>
+        <p data-en="Same shape — pull directory from DingTalk Open Platform, push into LDAP."
+           data-zh="同样的思路 —— 从钉钉开放平台拉取通讯录，写入 LDAP。"></p>
+      </div>
+      <div class="roadmap-item idea reveal">
+        <span class="status">○ <span data-en="Planned" data-zh="计划中"></span></span>
+        <h4 data-en="Feishu (飞书) &amp; multi-source" data-zh="飞书 & 多源合并"></h4>
+        <p data-en="Pull from Feishu, plus a unified mode that merges multiple platforms into one LDAP tree."
+           data-zh="支持飞书，并提供「多源合并模式」—— 多个平台聚合到一颗 LDAP 树。"></p>
+      </div>
+    </div>
+
+    <div class="cta-card reveal">
+      <h2 data-en="Built something? Found a rough edge?" data-zh="用上了？遇到了点问题？"></h2>
+      <p data-en="Issues, PRs, and stars are all welcome. The repo is small and easy to read — start there."
+         data-zh="欢迎提交 Issue 和 PR，也欢迎给个 Star。仓库很小、代码很短，从源码读起最快。"></p>
+      <div class="hero-cta" style="margin-bottom:0">
+        <a href="https://github.com/caoool/sync-ldap" target="_blank" rel="noopener" class="btn btn-primary">
+          <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
+          <span data-en="Star on GitHub" data-zh="去 GitHub 加星"></span>
+        </a>
+        <a href="https://github.com/caoool/sync-ldap/issues" target="_blank" rel="noopener" class="btn btn-ghost">
+          <span data-en="Open an Issue" data-zh="提交 Issue"></span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap footer-inner">
+    <div>
+      <span data-en="Built for the open-source community." data-zh="为开源社区而生。"></span>
+      ·
+      <a href="https://github.com/caoool/sync-ldap/blob/main/README.md" target="_blank" rel="noopener">README</a>
+      ·
+      <a href="https://github.com/caoool/sync-ldap/issues" target="_blank" rel="noopener">Issues</a>
+    </div>
+    <div>
+      <a href="https://github.com/caoool/sync-ldap" target="_blank" rel="noopener">github.com/caoool/sync-ldap</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ─── Language toggle ─────────────────────────────────────
+  const html = document.documentElement;
+  const langButtons = document.querySelectorAll('[data-set-lang]');
+  function setLang(lang){
+    html.setAttribute('lang', lang);
+    document.body.setAttribute('data-lang', lang);
+    langButtons.forEach(b => b.classList.toggle('active', b.dataset.setLang === lang));
+    try { localStorage.setItem('sync-ldap-lang', lang); } catch(e){}
+  }
+  langButtons.forEach(b => b.addEventListener('click', () => setLang(b.dataset.setLang)));
+  // Restore preference, otherwise infer from browser
+  const stored = (function(){ try { return localStorage.getItem('sync-ldap-lang'); } catch(e){ return null; } })();
+  const browserPrefersZh = (navigator.language || '').toLowerCase().startsWith('zh');
+  setLang(stored || (browserPrefersZh ? 'zh' : 'en'));
+
+  // ─── Header shadow on scroll ─────────────────────────────
+  const hdr = document.getElementById('hdr');
+  const onScroll = () => hdr.classList.toggle('scrolled', window.scrollY > 8);
+  window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+  // ─── Reveal on scroll ────────────────────────────────────
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold: 0.12});
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // ─── Copy buttons ────────────────────────────────────────
+  document.querySelectorAll('.code-copy').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const target = document.getElementById(btn.dataset.copy);
+      if (!target) return;
+      const text = target.innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        const original = btn.textContent;
+        btn.textContent = '✓ Copied';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1600);
+      } catch(e){ /* ignore */ }
+    });
+  });
+
+  // ─── Live star count ─────────────────────────────────────
+  fetch('https://api.github.com/repos/caoool/sync-ldap')
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { if (d && typeof d.stargazers_count === 'number'){
+      document.getElementById('starCount').textContent = d.stargazers_count.toLocaleString();
+    }})
+    .catch(() => {});
+</script>
+
+</body>
+</html>
