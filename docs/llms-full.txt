@@ -1,0 +1,179 @@
+# wecom-ldap-sync
+
+> wecom-ldap-sync is a self-hosted Docker service that mirrors your WeCom (企业微信) directory into OpenLDAP — departments, users, groups, and passwords — for SSO, unified identity, and centralized account management. Open-source under Apache-2.0, runs entirely behind your firewall, no telemetry.
+
+- **Landing page**: https://caoool.github.io/sync-ldap/
+- **Repository**: https://github.com/caoool/sync-ldap
+- **Docker image**: `caoool/wecom-ldap-sync:latest` (https://hub.docker.com/r/caoool/wecom-ldap-sync)
+- **License**: Apache-2.0
+- **Languages**: Python 3, Docker
+- **Status**: Stable for WeCom; DingTalk (钉钉) and Feishu (飞书) on the roadmap.
+
+## What it does
+
+A single sync container reads the WeCom (Enterprise WeChat) directory via a self-built app (自建应用) using the official Open API, then writes a faithful copy into any LDAP / OpenLDAP server. It re-runs on a configurable interval (default: every 30 minutes), with one immediate run on container startup.
+
+Specifically:
+
+- Pulls departments and users from WeCom (requires the contacts read permission, 通讯录读取).
+- Creates a matching OU hierarchy in LDAP (`organizationalUnit` entries with full parent/child structure, renames handled).
+- Creates each user as `inetOrgPerson` with mapped attributes (see "Attribute mapping" below).
+- Creates a `groupOfNames` per department under `ou=groups`, with members linked by full DN.
+- Sets a configurable SSHA-hashed default password (`LDAP_DEFAULT_PASSWORD`) for new users and existing users that lack one. Already-set passwords are never overwritten.
+- Tracks department moves: when a user changes department in WeCom, the LDAP entry is removed from the old OU and re-created in the new one.
+- Optionally removes LDAP users that no longer exist in WeCom (`SYNC_DELETE_ORPHANS=true`).
+- Supports `DRY_RUN=true` to preview every operation without writing to LDAP.
+
+## Architecture
+
+Three moving parts:
+
+1. **WeCom (企业微信)** — your organization's directory, accessed via the WeCom Open API.
+2. **wecom-ldap-sync** — a Python service using APScheduler for scheduling and `ldap3` for LDAP writes. Single-instance: `max_instances=1` + `coalesce` ensure jobs never duplicate or pile up.
+3. **LDAP server** — typically OpenLDAP, exposed on ports 389 (LDAP) and 636 (LDAPS).
+
+The compose file ships both `openldap` and `wecom-ldap-sync` on a private Docker network. Only the LDAP ports are exposed to the host.
+
+## Attribute mapping (WeCom field → LDAP attribute)
+
+Each user becomes an `inetOrgPerson` with the following attributes. Optional fields are only set when WeCom returns a value.
+
+| WeCom field | LDAP attribute | Notes |
+|---|---|---|
+| `userid` | `uid`, `employeeNumber` | Used as the RDN — DN is `uid=<userid>,ou=<dept>,…` |
+| `name` | `cn`, `displayName` | Full name as shown in WeCom. |
+| `name` (split) | `sn`, `givenName` | First character → `sn`, rest → `givenName`. Best-effort for CJK names. |
+| `email` | `mail` | If present in WeCom; otherwise generated as `uid + EMAIL_SUFFIX` when configured. |
+| `mobile` | `mobile` | Only available for verified WeCom orgs (已验证企业). |
+| `position` | `title` | Job title set in WeCom. |
+| `gender` | `initials` | WeCom 1=M, 2=F → initials. Skipped for 0/undefined. |
+| `department[]` | `departmentNumber` | All department IDs the user belongs to. |
+| (generated) | `userPassword` | SSHA hash of `LDAP_DEFAULT_PASSWORD`. Only set on creation, or for users currently lacking a password. |
+
+## Quick start (5 minutes)
+
+You'll need: Docker, a WeCom corp admin account, and a server with a stable outbound IP.
+
+### 1. Create a WeCom self-built app
+
+1. Go to the WeCom Admin Console: https://work.weixin.qq.com/wework_admin/frame
+2. **我的企业 → 企业信息** → copy **企业ID** → use as `WECOM_CORPID`
+3. **应用管理 → 自建** → create an app → grant **通讯录** (contacts) read permission → copy the app's **Secret** → use as `WECOM_CORPSECRET`
+4. Add your server's outbound IP to the app's **企业可信IP** allowlist.
+
+### 2. Clone and configure
+
+```bash
+git clone https://github.com/caoool/sync-ldap.git
+cd sync-ldap
+cp .env.example .env
+$EDITOR .env   # fill in LDAP_*, WECOM_*, EMAIL_SUFFIX, etc.
+```
+
+### 3. Launch
+
+```bash
+docker compose up -d
+```
+
+The compose file boots `openldap` and `wecom-ldap-sync` together. The sync runs once immediately, then every `SYNC_INTERVAL_MINUTES` (default 30).
+
+### 4. Verify
+
+```bash
+docker compose logs -f wecom-ldap-sync
+# Then connect any LDAP client to localhost:389 with your admin DN, e.g.:
+ldapsearch -x -H ldap://localhost:389 \
+  -D "cn=admin,dc=ldap,dc=example,dc=com" \
+  -W -b "dc=ldap,dc=example,dc=com"
+```
+
+## Configuration reference
+
+| Variable | Default | Description |
+|---|---|---|
+| `LDAP_DOMAIN` | `ldap.example.com` | Domain used by openldap to derive the base DN. |
+| `LDAP_BASE_DN` | `dc=ldap,dc=example,dc=com` | Base DN; must match `LDAP_DOMAIN`. |
+| `LDAP_ADMIN_PASSWORD` | `changeme` | LDAP admin password — change this. |
+| `LDAP_ADMIN_DN` | `cn=admin,dc=ldap,dc=example,dc=com` | Admin bind DN; must match base DN. |
+| `LDAP_USER_OU` | `people` | OU under base DN where synced users live. |
+| `LDAP_DEFAULT_PASSWORD` | `changeme` | SSHA-hashed default password for new users and existing users without a password. Not overwritten if a password is already set. |
+| `LDAP_HOST` | `openldap` (in compose), `127.0.0.1` (local) | LDAP server host. |
+| `LDAP_PORT` | `389` | LDAP server port. |
+| `LDAP_TLS` | `false` | Enable LDAPS / StartTLS in the openldap container. |
+| `EMAIL_SUFFIX` | `@example.com` | Auto-generate email as `uid + suffix` when WeCom doesn't return one. Leave blank to skip. Real WeCom emails always take priority. |
+| `WECOM_CORPID` | — | Corp ID from 我的企业 → 企业信息. |
+| `WECOM_CORPSECRET` | — | Self-built app Secret. |
+| `WECOM_API_BASE` | `https://qyapi.weixin.qq.com/cgi-bin` | WeCom API base URL; override for proxies or private deployments. |
+| `SYNC_INTERVAL_MINUTES` | `30` | How often to re-sync. |
+| `SYNC_DELETE_ORPHANS` | `true` (in `.env.example`) | Delete LDAP users no longer in WeCom on the next sync. |
+| `DRY_RUN` | `false` | Preview changes without writing to LDAP. |
+
+## When to use this
+
+**Use wecom-ldap-sync when:**
+
+- WeCom (企业微信) is your source of truth for org structure and you want LDAP downstream.
+- You need a self-hosted solution — no third-party cloud, no SaaS, no data leaves your network.
+- You want a small, single-purpose, auditable tool you can read end-to-end in an afternoon.
+- You want a working stack (OpenLDAP + sync) up in under five minutes.
+
+**Skip this if:**
+
+- You need bi-directional sync (LDAP → WeCom is not supported).
+- You target Active Directory specifically — the project writes to OpenLDAP / RFC 4519-compliant LDAP, AD is untested.
+- You need per-user fine-grained RBAC inside the sync itself.
+- You're already on a commercial identity platform (Okta, Authing, JumpCloud) with WeCom SCIM and don't want to self-host.
+
+**How it compares:**
+
+- **vs. writing a custom script** — gives you scheduler, dry-run, orphan handling, password hashing, CJK name splitting, department moves, and attribute mapping out of the box.
+- **vs. Keycloak / FreeIPA custom connectors** — much smaller surface, no JVM, no app server. Use this if you only need WeCom → LDAP; use Keycloak if you also need full IdP/SSO features.
+- **vs. commercial WeCom-aware SSO platforms** (Authing, FengCai, etc.) — self-hosted, free, Apache-2.0. No web UI. Best when LDAP is what your downstream apps already speak.
+- **vs. DingTalk / Feishu sync** — both are planned (same architecture). Not yet shipped.
+
+## FAQ
+
+### How often does the sync run? Can I change the interval?
+
+Every 30 minutes by default. Set `SYNC_INTERVAL_MINUTES` in `.env` to change it. The sync also runs once immediately when the container starts, so you don't have to wait for the first tick.
+
+### Why isn't WeCom returning email or phone numbers for my users?
+
+WeCom treats email and mobile as sensitive fields and only returns them for verified organizations (已验证企业). For unverified orgs the API returns empty strings. As a workaround, set `EMAIL_SUFFIX=@yourdomain.com` and the sync will generate `uid@yourdomain.com` as the `mail` attribute. Real WeCom emails always take priority when present.
+
+### What happens when an employee leaves the company?
+
+With `SYNC_DELETE_ORPHANS=true` (the default in `.env.example`), users no longer in WeCom are removed from LDAP on the next sync. Set it to `false` to keep historical entries — useful when downstream systems still reference them.
+
+### How are passwords set on synced LDAP users?
+
+New users receive `LDAP_DEFAULT_PASSWORD` (SSHA-hashed). Existing users without a password also receive it on the next sync. Users who already have a password are never overwritten, so end users can change their own credentials safely without being reset by the sync.
+
+### Can I preview changes before they hit LDAP?
+
+Yes. Set `DRY_RUN=true` in `.env` and the sync logs every operation it would perform without writing anything. Set it back to `false` once the diff looks right.
+
+### Does this support DingTalk (钉钉) or Feishu (飞书)?
+
+Not yet — both are on the roadmap. The architecture is platform-agnostic, so adding a new source is mostly a matter of writing a new fetcher. Issues and PRs are welcome.
+
+### Do I need to expose LDAP publicly on the internet?
+
+No. The sync container talks to OpenLDAP over the internal Docker network. Only expose ports 389/636 to the LAN clients that need them. LDAPS is supported via `LDAP_TLS=true` if you want encrypted transport on the wire.
+
+## Limitations
+
+- WeCom does not expose email/mobile for unverified orgs. Use `EMAIL_SUFFIX` as a workaround.
+- Some WeCom accounts have email-style or phone-number `userid` values set by the admin who created them (e.g. `user@company.com`, `186xxxx`). These are used as-is for the LDAP `uid`.
+- Active Directory writes are untested.
+
+## Roadmap
+
+- DingTalk (钉钉) sync — planned.
+- Feishu (飞书) sync — planned.
+- Multi-source merge (multiple platforms into one LDAP tree) — planned.
+
+## Citing
+
+A `CITATION.cff` file is available at the repository root.

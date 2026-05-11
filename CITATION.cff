@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+title: "wecom-ldap-sync: WeCom (企业微信) directory → OpenLDAP sync"
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+  - given-names: caoool
+    email: caooolu@gmail.com
+    website: "https://github.com/caoool"
+abstract: >-
+  A self-hosted Docker service that mirrors your WeCom (企业微信) directory
+  into OpenLDAP — departments, users, groups, and passwords — for SSO,
+  unified identity, and centralized account management.
+url: "https://caoool.github.io/sync-ldap/"
+repository-code: "https://github.com/caoool/sync-ldap"
+license: Apache-2.0
+keywords:
+  - wecom
+  - 企业微信
+  - enterprise-wechat
+  - ldap
+  - openldap
+  - ldap-sync
+  - directory-sync
+  - sso
+  - identity-management
+  - docker
+  - self-hosted

@@ -1,8 +1,12 @@
+# Default — everyone allowed
 User-agent: *
 Allow: /
 
-# Major search engines
+# ─── Search engines ──────────────────────────────────────────
 User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
 Allow: /
 
 User-agent: Baiduspider
@@ -14,10 +18,85 @@ Allow: /
 User-agent: 360Spider
 Allow: /
 
-User-agent: Bingbot
+User-agent: YisouSpider
 Allow: /
 
-User-agent: YisouSpider
+User-agent: DuckDuckBot
+Allow: /
+
+# ─── AI assistants & training crawlers ──────────────────────
+# Explicitly allow — many sites block these by default; we want
+# wecom-ldap-sync to be discoverable and citable by AI assistants.
+
+# OpenAI
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+# Anthropic
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# Google Gemini (uses a separate token from Googlebot for AI training)
+User-agent: Google-Extended
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Apple Intelligence
+User-agent: Applebot-Extended
+Allow: /
+
+# Amazon (Alexa / Rufus / Bedrock crawling)
+User-agent: Amazonbot
+Allow: /
+
+# Common Crawl — feeds many LLM training pipelines
+User-agent: CCBot
+Allow: /
+
+# Meta AI
+User-agent: Meta-ExternalAgent
+Allow: /
+
+# DuckDuckGo Assist
+User-agent: DuckAssistBot
+Allow: /
+
+# ByteDance / Doubao / TikTok AI
+User-agent: Bytespider
+Allow: /
+
+# Diffbot (used by Bing AI and others)
+User-agent: Diffbot
+Allow: /
+
+# Mistral
+User-agent: MistralAI-User
+Allow: /
+
+# You.com
+User-agent: YouBot
+Allow: /
+
+# Cohere
+User-agent: cohere-ai
 Allow: /
 
 Sitemap: https://caoool.github.io/sync-ldap/sitemap.xml

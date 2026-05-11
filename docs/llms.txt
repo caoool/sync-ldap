@@ -6,6 +6,7 @@ A tiny, single-purpose tool: one sync container reads the WeCom directory via a 
 
 ## Project
 
+- [Full markdown reference](https://caoool.github.io/sync-ldap/llms-full.txt): The whole landing page in plain markdown — features, attribute mapping, quick start, full config table, FAQ, comparison, and roadmap. Start here if you want the complete picture in one fetch.
 - [Landing page](https://caoool.github.io/sync-ldap/): Bilingual (English / 中文) overview, features, quick start, config reference, and FAQ.
 - [GitHub repository](https://github.com/caoool/sync-ldap): Source, issues, and PRs.
 - [Docker Hub](https://hub.docker.com/r/caoool/wecom-ldap-sync): Pre-built image `caoool/wecom-ldap-sync:latest`.
