@@ -1,0 +1,9 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://caoool.github.io/sync-ldap/
+    about: Read the quick start, configuration reference, and FAQ.
+  - name: Docker Hub
+    url: https://hub.docker.com/r/caoool/wecom-ldap-sync
+    about: Pull the published Docker image.
+
