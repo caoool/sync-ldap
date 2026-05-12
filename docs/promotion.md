@@ -90,23 +90,26 @@ Full description:
 
 ## Suggested GitHub Topics
 
-Add these repository topics in GitHub:
+Current repository topics:
 
-`wecom`, `ldap`, `openldap`, `docker`, `self-hosted`, `sso`, `identity-management`, `directory-sync`, `wecom-ldap`, `enterprise-wechat`, `企业微信`, `通讯录同步`
+`wecom`, `ldap`, `openldap`, `docker`, `self-hosted`, `sso`, `identity-management`, `directory-sync`, `wecom-ldap`, `enterprise-wechat`, `ldap-sync`, `dingtalk`, `feishu`, `docker-compose`, `python`
 
 ## Launch Checklist
 
-- [ ] Add GitHub repository topics.
-- [ ] Create a GitHub release with release notes and the Docker image tag.
-- [ ] Update Docker Hub description using the copy above.
+- [x] Add GitHub repository topics.
+- [x] Create a GitHub release with release notes: https://github.com/caoool/sync-ldap/releases/tag/v0.1.0
+- [x] Update Docker Hub description using the copy above: https://hub.docker.com/r/caoool/wecom-ldap-sync
+- [x] Open feedback issues for DingTalk, Feishu, and extra LDAP attribute mappings:
+  - https://github.com/caoool/sync-ldap/issues/2
+  - https://github.com/caoool/sync-ldap/issues/3
+  - https://github.com/caoool/sync-ldap/issues/4
+  - https://github.com/caoool/sync-ldap/issues/5
 - [ ] Post the Chinese launch note to V2EX, 开源中国, 掘金, SegmentFault, and relevant WeCom/self-hosted groups.
 - [ ] Post the English launch note to r/selfhosted, r/devops, Hacker News Show HN, and relevant LDAP/SSO communities.
 - [ ] Ask explicitly for testers using WeCom plus OpenLDAP.
-- [ ] Open feedback issues for DingTalk, Feishu, and extra LDAP attribute mappings.
 
 ## Feedback Prompt
 
 Use this sentence at the end of posts:
 
 > If you use WeCom with LDAP, SSO, VPN, or self-hosted internal apps, I would like to know which LDAP attributes and edge cases matter in your setup.
-
