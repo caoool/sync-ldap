@@ -1,0 +1,37 @@
+name: Tester feedback
+description: Share results from trying wecom-ldap-sync in a real environment.
+title: "[Feedback]: "
+labels:
+  - feedback
+body:
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup
+      description: Describe your WeCom, LDAP, and deployment setup. Remove secrets.
+      placeholder: WeCom verified/unverified, OpenLDAP version, number of users/departments...
+    validations:
+      required: true
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked
+      description: What synced successfully?
+    validations:
+      required: true
+  - type: textarea
+    id: issues
+    attributes:
+      label: Issues or missing pieces
+      description: What failed, confused you, or blocked production use?
+    validations:
+      required: false
+  - type: textarea
+    id: attributes
+    attributes:
+      label: LDAP attributes you need
+      description: Which LDAP attributes should be mapped for your environment?
+      placeholder: uid, cn, mail, mobile, title, departmentNumber...
+    validations:
+      required: false
+

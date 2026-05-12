@@ -13,6 +13,9 @@ A tiny, single-purpose tool: one sync container reads the WeCom directory via a 
 - [README](https://github.com/caoool/sync-ldap/blob/main/README.md): Bilingual setup instructions and config table.
 - [.env.example](https://github.com/caoool/sync-ldap/blob/main/.env.example): Complete list of environment variables with defaults.
 - [compose.yml](https://github.com/caoool/sync-ldap/blob/main/compose.yml): Reference Docker Compose stack (openldap + wecom-ldap-sync).
+- [Architecture notes](https://github.com/caoool/sync-ldap/blob/main/docs/architecture.md): Runtime components, data flow, LDAP writes, and security notes.
+- [Promotion kit](https://github.com/caoool/sync-ldap/blob/main/docs/promotion.md): Launch copy, Docker Hub copy, GitHub topics, and community checklist.
+- [Changelog](https://github.com/caoool/sync-ldap/blob/main/CHANGELOG.md): Notable documentation and release changes.
 
 ## Key concepts
 
@@ -28,3 +31,7 @@ A tiny, single-purpose tool: one sync container reads the WeCom directory via a 
 - DingTalk (钉钉) sync — planned.
 - Feishu (飞书) sync — planned.
 - Multi-source merge (multiple platforms into one LDAP tree) — planned.
+
+## Feedback wanted
+
+The project is looking for testers running WeCom with OpenLDAP, SSO, VPN, or self-hosted internal tools. Useful feedback includes missing LDAP attributes, WeCom edge cases, deployment notes, and priority between DingTalk and Feishu support.

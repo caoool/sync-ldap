@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest a new sync source, LDAP mapping, or operational feature.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What use case would this solve?
+      placeholder: I need to sync...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - WeCom sync
+        - LDAP mapping
+        - DingTalk support
+        - Feishu support
+        - Deployment
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior or API you would like.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workaround or alternative design you have tried.
+    validations:
+      required: false
+

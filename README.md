@@ -7,6 +7,12 @@
 
 📖 **Languages:** [English](#english) · [中文](#中文)
 
+### Project links
+
+- [Architecture notes](docs/architecture.md): data flow, runtime components, LDAP writes, and security notes.
+- [Promotion kit](docs/promotion.md): launch posts, Docker Hub copy, GitHub topics, and community checklist.
+- [Changelog](CHANGELOG.md): notable documentation and release changes.
+
 ---
 
 ## English
@@ -81,6 +87,10 @@ Key variables (see `.env.example` for the full list):
 - [ ] Feishu (飞书) sync support
 - [ ] Multi-source merge (sync from multiple platforms into one LDAP)
 
+### Feedback wanted
+
+If you run WeCom with OpenLDAP, SSO, VPN, or self-hosted internal apps, feedback is welcome. Useful reports include missing LDAP attributes, sync edge cases, deployment notes, and whether DingTalk or Feishu support should come next.
+
 ---
 
 ## 中文
@@ -154,3 +164,7 @@ docker compose logs -f wecom-ldap-sync
 - [ ] 钉钉（DingTalk）同步支持
 - [ ] 飞书（Feishu）同步支持
 - [ ] 多源合并（多个平台同步到同一 LDAP）
+
+### 欢迎反馈
+
+如果你正在把企业微信与 OpenLDAP、SSO、VPN 或自托管内部系统一起使用，欢迎反馈真实场景。特别需要了解：缺失的 LDAP 字段、同步边界情况、部署问题，以及钉钉/飞书支持的优先级。

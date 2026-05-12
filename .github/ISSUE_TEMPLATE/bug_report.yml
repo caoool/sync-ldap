@@ -1,0 +1,54 @@
+name: Bug report
+description: Report a problem with WeCom to LDAP sync behavior.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+      placeholder: The sync worker failed to...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include Docker image tag, OpenLDAP version, deployment method, and OS if relevant.
+      placeholder: |
+        Docker image:
+        OpenLDAP:
+        Docker Compose:
+        OS:
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration
+      description: Paste relevant `.env` values with secrets removed.
+      render: shell
+      placeholder: |
+        LDAP_BASE_DN=dc=example,dc=com
+        SYNC_DELETE_ORPHANS=true
+        DRY_RUN=false
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste the relevant output from `docker compose logs wecom-ldap-sync`.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
